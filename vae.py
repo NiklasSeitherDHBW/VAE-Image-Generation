@@ -399,8 +399,6 @@ def save_curves(history: dict, out_dir: str, tag: str) -> None:
 def run(dataset: str, z_dim: int, beta: float, seed: int, epochs: int, batch_size: int, lr: float, patience: int, out_root: str, num_workers: int) -> Tuple[float, float]:
     # Automatically select the GPU when available. Otherwise fall back to the CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    recon_best_list: List[float] = []
-    total_best_list: List[float] = []
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     tag_base = f"{dataset}_z{z_dim}_beta{int(beta)}_{timestamp}"
     out_dir = os.path.join(out_root, tag_base)
@@ -413,8 +411,6 @@ def run(dataset: str, z_dim: int, beta: float, seed: int, epochs: int, batch_siz
 
     # Re-evaluate to be safe after loading best state
     final_loss, final_bce, _ = evaluate(model, val_loader, device, beta)
-    total_best_list.append(final_loss)
-    recon_best_list.append(final_bce)
 
     # Save qualitative and quantitative diagnostics
     run_tag = f"{tag_base}_run0"
@@ -423,10 +419,8 @@ def run(dataset: str, z_dim: int, beta: float, seed: int, epochs: int, batch_siz
     save_tsne(model, val_loader, device, out_dir, run_tag)
     save_curves(history, out_dir, run_tag)
 
-    recon_mean = float(np.mean(recon_best_list))
-    recon_std = float(np.std(recon_best_list))
-    print(f"Recon (val) {dataset} z={z_dim} beta={beta}: {recon_mean:.4f}")
-    return float(np.mean(total_best_list)), recon_mean
+    print(f"Recon (val) {dataset} z={z_dim} beta={beta}: {final_loss:.4f} | {final_bce:.4f}")
+    return final_loss, final_bce
 
 
 if __name__ == "__main__":

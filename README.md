@@ -2,11 +2,6 @@
 
 Dieses Repository enthält die Umsetzung eines Variationalen Autoencoders (VAE) zur Generierung und Rekonstruktion von 28×28 Graustufenbildern. Standardmäßig wird der Fashion-MNIST Datensatz verwendet, optional kann auch MNIST genutzt werden.
 
-### Ziel
-- **VAE trainieren**: Rekonstruktion von Eingabebildern und Generierung plausibler Bilder aus Zufallsvektoren.
-- **Qualitative Auswertungen**: Rekonstruktionen, latente Interpolationen und t-SNE-Visualisierung des latenten Raums.
-- **Trainingskurven**: Speicherung von Verlust- und Rekonstruktionskurven.
-
 ### Datensatz
 - **Standard**: Fashion-MNIST (`config.py → dataset = "fashion"`).
 - **Alternativ**: MNIST (`"mnist"`).
