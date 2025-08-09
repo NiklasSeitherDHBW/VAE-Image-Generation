@@ -63,7 +63,7 @@ Beispielgrafiken (entsprechen den automatisch erzeugten Dateien mit der Konfigur
 
 **Latente Interpolation**
 
-  ![Interpolation](resources/interpolation.png)
+  <img src="resources/interpolation.png" alt="drawing" height="60"/>
 
 **Lernkurven**
 
