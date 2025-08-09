@@ -3,16 +3,16 @@
 Dieses Repository enthält die Umsetzung eines Variationalen Autoencoders (VAE) zur Generierung und Rekonstruktion von 28×28 Graustufenbildern. Standardmäßig wird der Fashion-MNIST Datensatz verwendet, optional kann auch MNIST genutzt werden.
 
 ### Datensatz
-- **Standard**: Fashion-MNIST (`config.py → dataset = "fashion"`).
-- **Alternativ**: MNIST (`"mnist"`).
-- **Download**: Automatisch nach `outputs/data/`.
+- **Standard**: Fashion-MNIST (`config.py → dataset = "fashion"`)
+- **Alternativ**: MNIST (`"mnist"`)
+- **Download**: Automatisch nach `outputs/data/`
 
 ### Modellaufbau (Konzept)
 Ein Variationaler Autoencoder besteht aus drei zentralen Bausteinen:
 
-- **Encoder**: komprimiert ein Eingabebild in eine latente Repräsentation, die als Wahrscheinlichkeitsverteilung (Mittelwert und Streuung einer multivariaten Normalverteilung) parametrisiert wird.
-- **Reparametrisierungstrick**: erlaubt das stochastische Ziehen eines latenten Vektors $z$ aus dieser Verteilung, während Gradienten für das Lernen weiterhin fließen können.
-- **Decoder**: rekonstruiert aus $z$ wieder ein Bild. Durch Ziehen von $z \sim \mathcal{N}(0, I)$ können neue, zuvor ungesehene Bilder generiert werden.
+- **Encoder**: komprimiert ein Eingabebild in eine latente Repräsentation, die als Wahrscheinlichkeitsverteilung (Mittelwert und Streuung einer multivariaten Normalverteilung) parametrisiert wird
+- **Reparametrisierungstrick**: erlaubt das stochastische Ziehen eines latenten Vektors $z$ aus dieser Verteilung, während Gradienten für das Lernen weiterhin fließen können
+- **Decoder**: rekonstruiert aus $z$ wieder ein Bild. Durch Ziehen von $z \sim \mathcal{N}(0, I)$ können neue, zuvor ungesehene Bilder generiert werden
 
 Das Lernziel balanciert zwei Komponenten, einen **Rekonstruktionsfehler** (Bildtreue) und eine **Regularisierung des latenten Raums** (KL-Divergenz zur Standardnormalverteilung). Der Faktor $\beta$ steuert diesen Kompromiss. Ein gut strukturierter latenter Raum führt dazu, dass ähnliche Bilder nahe beieinander liegen und Interpolationen zwischen Punkten glatte, semantisch sinnvolle Übergänge ergeben.
 
