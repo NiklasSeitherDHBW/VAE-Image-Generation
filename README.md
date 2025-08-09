@@ -14,7 +14,7 @@ Ein Variationaler Autoencoder besteht aus drei zentralen Bausteinen:
 - **Reparametrisierungstrick**: erlaubt das stochastische Ziehen eines latenten Vektors $z$ aus dieser Verteilung, während Gradienten für das Lernen weiterhin fließen können.
 - **Decoder**: rekonstruiert aus $z$ wieder ein Bild. Durch Ziehen von $z \sim \mathcal{N}(0, I)$ können neue, zuvor ungesehene Bilder generiert werden.
 
-Das Lernziel balanciert zwei Komponenten: einen **Rekonstruktionsfehler** (Bildtreue) und eine **Regularisierung des latenten Raums** (KL-Divergenz zur Standardnormalverteilung). Der Faktor $\beta$ steuert diesen Kompromiss. Ein gut strukturierter latenter Raum führt dazu, dass ähnliche Bilder nahe beieinander liegen und Interpolationen zwischen Punkten glatte, semantisch sinnvolle Übergänge ergeben.
+Das Lernziel balanciert zwei Komponenten, einen **Rekonstruktionsfehler** (Bildtreue) und eine **Regularisierung des latenten Raums** (KL-Divergenz zur Standardnormalverteilung). Der Faktor $\beta$ steuert diesen Kompromiss. Ein gut strukturierter latenter Raum führt dazu, dass ähnliche Bilder nahe beieinander liegen und Interpolationen zwischen Punkten glatte, semantisch sinnvolle Übergänge ergeben.
 
 ### Installation und Ausführung
 Voraussetzungen: Python 3.11+
