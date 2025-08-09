@@ -59,7 +59,7 @@ Beispielgrafiken (entsprechen den automatisch erzeugten Dateien mit der Konfigur
 
 **Originale vs. Rekonstruktion**
 
-  ![Originale](resources/original-reconstruction.png)
+  ![Originale](resources/original_vs_reconstruction.png)
 
 **Latente Interpolation**
 

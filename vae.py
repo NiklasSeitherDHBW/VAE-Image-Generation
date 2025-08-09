@@ -1,7 +1,7 @@
 import os
 import random
 from datetime import datetime
-from typing import Tuple, List
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -12,11 +12,11 @@ from torchvision import datasets, transforms, utils as vutils
 import config
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE, trustworthiness
+from sklearn.manifold import TSNE
 
 
 def set_global_seed(seed: int) -> None:
-    """Set seeds across Python, NumPy, and PyTorch for reproducibility."""
+    """Set seeds across Python, NumPy, and PyTorch for reproducibility"""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -24,7 +24,7 @@ def set_global_seed(seed: int) -> None:
 
 
 class Encoder(nn.Module):
-    """Conv encoder mapping 28x28 grayscale to latent mean and log-variance."""
+    """Conv encoder mapping 28x28 grayscale to latent mean and log-variance"""
     def __init__(self, latent_dim: int):
         super().__init__()
         # Two strided conv layers downsample 28→14→7 spatially
@@ -37,7 +37,7 @@ class Encoder(nn.Module):
 
         self.flatten = nn.Flatten()
         
-        # Map the 7×7×64 tensor to latent parameters μ and log variance
+        # Map the 7×7×64 tensor to latent parameters mu and log variance
         feat_dim = 64 * 7 * 7
         self.fc_mu = nn.Linear(feat_dim, latent_dim)
         self.fc_logvar = nn.Linear(feat_dim, latent_dim)
@@ -51,7 +51,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    """Conv decoder mapping latent vectors back to 28x28 images."""
+    """Conv decoder mapping latent vectors back to 28x28 images"""
     def __init__(self, latent_dim: int):
         super().__init__()
 
@@ -75,7 +75,7 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    """Variational Autoencoder with reparameterization trick."""
+    """Variational Autoencoder with reparameterization trick"""
     def __init__(self, latent_dim: int):
         super().__init__()
         self.encoder = Encoder(latent_dim)
@@ -83,12 +83,12 @@ class VAE(nn.Module):
 
     @staticmethod
     def reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """Sample latent z via z = mu + std * eps."""
+        """Sample latent z via z = mu + std * eps"""
         # Convert log variance to standard deviation
         std = torch.exp(0.5 * logvar)
-        # Sample noise ε ~ N(0, I) with same shape as std
+        # Sample noise epsilon N(0, I) with same shape as std
         eps = torch.randn_like(std)
-        # Reparameterization trick enables gradients to flow through μ, σ
+        # Reparameterization trick enables gradients to flow through mu and sigma
         return mu + eps * std
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -99,18 +99,18 @@ class VAE(nn.Module):
 
 
 def vae_loss(x: torch.Tensor, x_hat: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor, beta: float) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """VAE loss equals reconstruction BCE plus beta times KL divergence."""
+    """VAE loss equals reconstruction BCE plus beta times KL divergence"""
     # The reconstruction term sums over pixels then averages over the batch for stability
     bce = F.binary_cross_entropy(x_hat, x, reduction="sum") / x.size(0)
     # The KL divergence uses the closed form for N of mu and sigma squared versus a standard normal. It is averaged per sample
     kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / x.size(0)
-    # β scales disentanglement pressure (β=1 standard VAE, β>1 β-VAE)
+    # beta scales disentanglement pressure (beta=1 standard VAE, beta>1 beta-VAE)
     total = bce + beta * kld
     return total, bce, kld
 
 
 def get_dataloaders(dataset_name: str, data_dir: str, batch_size: int, seed: int, num_workers: int = 2) -> Tuple[DataLoader, DataLoader]:
-    """Load the dataset and create a fixed 90 10 train validation split."""
+    """Load the dataset and create a fixed 90 10 train validation split"""
     # Convert PIL images to tensors in the range 0 to 1
     transform = transforms.ToTensor()
     if dataset_name.lower() == "fashion":
@@ -129,7 +129,7 @@ def get_dataloaders(dataset_name: str, data_dir: str, batch_size: int, seed: int
     train_size = len(full_train) - val_size
     train, val = random_split(full_train, [train_size, val_size], generator=generator)
 
-    # Build DataLoader kwargs to enable performance options
+    # Build DataLoader
     loader_kwargs = dict(
         batch_size=batch_size,
         num_workers=num_workers,
@@ -143,12 +143,13 @@ def get_dataloaders(dataset_name: str, data_dir: str, batch_size: int, seed: int
 
     train_loader = DataLoader(train, shuffle=True, **loader_kwargs)
     val_loader = DataLoader(val, shuffle=False, **loader_kwargs)
+
     return train_loader, val_loader
 
 
 @torch.no_grad()
 def evaluate(model: VAE, loader: DataLoader, device: torch.device, beta: float) -> Tuple[float, float, float]:
-    """Compute mean total, BCE, and KL losses on a loader."""
+    """Compute mean total, BCE, and KL losses on a loader"""
     # Switch to evaluation mode. Disable updates in dropout and batch normalization
     model.eval()
     total_loss, total_bce, total_kld, n = 0.0, 0.0, 0.0, 0
@@ -175,7 +176,7 @@ def evaluate(model: VAE, loader: DataLoader, device: torch.device, beta: float) 
 
 
 def train(model: VAE, train_loader: DataLoader, val_loader: DataLoader, device: torch.device, epochs: int, beta: float, lr: float, patience: int) -> Tuple[VAE, dict]:
-    """Train with Adam. Track history and apply early stopping."""
+    """Train with Adam. Track history and apply early stopping"""
 
     # Adam optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -241,26 +242,25 @@ def train(model: VAE, train_loader: DataLoader, val_loader: DataLoader, device: 
 @torch.no_grad()
 def save_reconstructions(model: VAE, loader: DataLoader, device: torch.device,
                          out_dir: str, tag: str, max_images: int = 64) -> None:
-    """Speichere (1) Original-Grid, (2) Rekonstruktions-Grid und (3) beide Grids nebeneinander."""
+    """Save Originalgrid, reconstructiongrid and both side by side"""
     model.eval()
 
-    # Erstes Val-Batch
+    # First Val-Batch
     x, _ = next(iter(loader))
-    x = x.to(device, non_blocking=getattr(config, "non_blocking", True))[:max_images]
+    x = x.to(device, non_blocking=True)[:max_images]
     x_hat, _, _, _ = model(x)
 
-    # Gleiche Grid-Geometrie (nrow/padding), damit H/W identisch sind
+    # Same Gridgeometry (nrow/padding), so H/W are identical
     nrow = int(max_images ** 0.5)
     grid_true = vutils.make_grid(x.cpu(),     nrow=nrow, padding=2)
     grid_reco = vutils.make_grid(x_hat.cpu(), nrow=nrow, padding=2)
 
-    # Optional: separat speichern
     vutils.save_image(grid_true, os.path.join(out_dir, f"{tag}_orig_grid.png"))
     vutils.save_image(grid_reco, os.path.join(out_dir, f"{tag}_reco_grid.png"))
 
-    # Beide Grids in EIN Bild: horizontal konkatenieren + 10px Weißraum als Trenner
+    # turn both images into one
     C, H, W = grid_true.shape
-    sep = torch.ones((C, H, 10))  # weißer Balken
+    sep = torch.ones((C, H, 10))
     side_by_side = torch.cat([grid_true, sep, grid_reco], dim=2)
 
     vutils.save_image(side_by_side, os.path.join(out_dir, f"{tag}_orig_vs_reco_grids.png"))
@@ -268,13 +268,13 @@ def save_reconstructions(model: VAE, loader: DataLoader, device: torch.device,
 
 @torch.no_grad()
 def save_interpolations(model: VAE, loader: DataLoader, device: torch.device, out_dir: str, tag: str, steps: int = 8) -> None:
-    """Decode linear interpolations between two latent codes to show smooth transitions."""
+    """Decode linear interpolations between two latent codes to show smooth transitions"""
     model.eval()
 
-    # Pick two validation images and encode them to latent means. This is deterministic
+    # Pick two validation images and encode them to latent means
     x, _ = next(iter(loader))
-    x1 = x[:1].to(device, non_blocking=getattr(config, "non_blocking", True))
-    x2 = x[1:2].to(device, non_blocking=getattr(config, "non_blocking", True))
+    x1 = x[:1].to(device, non_blocking=True)
+    x2 = x[1:2].to(device, non_blocking=True)
     mu1, logvar1 = model.encoder(x1)
     mu2, logvar2 = model.encoder(x2)
     z1 = mu1
@@ -288,17 +288,8 @@ def save_interpolations(model: VAE, loader: DataLoader, device: torch.device, ou
     vutils.save_image(grid, os.path.join(out_dir, f"{tag}_interp.png"))
 
 
-def save_tsne(
-    model: VAE,
-    loader: DataLoader,
-    device: torch.device,
-    out_dir: str,
-    tag: str,
-    max_points: int = 2000,
-    show_legend: bool = True,
-    annotate_centroids: bool = False,
-) -> None:
-    """Project latent means to 2D using t-SNE with legend and annotations."""
+def save_tsne(model: VAE, loader: DataLoader, device: torch.device, out_dir: str, tag: str, max_points: int = 2000, show_legend: bool = True, annotate_centroids: bool = False) -> None:
+    """Project latent means to 2D using t-SNE with legend and annotations"""
 
     model.eval()
     zs, ys = [], []
@@ -307,7 +298,7 @@ def save_tsne(
     with torch.no_grad():
         seen = 0
         for x, y in loader:
-            x = x.to(device, non_blocking=getattr(config, "non_blocking", True))
+            x = x.to(device, non_blocking=True)
             mu, _ = model.encoder(x)
             zs.append(mu.cpu())
             ys.append(y)
@@ -318,43 +309,28 @@ def save_tsne(
     Z = torch.cat(zs, dim=0).numpy()
     Y = torch.cat(ys, dim=0).numpy()
 
-    # t-SNE: pca init, fixed seed for Reproduzierbarkeit
-    tsne = TSNE(n_components=2, init="pca", learning_rate="auto",
-                perplexity=30, random_state=0)
+    # t-SNE with pca init, fixed seed for reproducibility
+    tsne = TSNE(n_components=2, init="pca", learning_rate="auto", perplexity=30, random_state=0)
     Z2 = tsne.fit_transform(Z)
 
-    # Klassennamen aus dem Basis-Dataset ziehen (falls vorhanden)
-    base_ds = loader.dataset
-    if hasattr(base_ds, "dataset"):  # Subset -> echtes Dataset
-        base_ds = base_ds.dataset
-    class_names = getattr(base_ds, "classes", None)
+    # Extract class names from dataset
+    base_ds = loader.dataset.dataset
+    class_names = base_ds.classes
 
-    # Farben pro Klasse stabil aus tab10
+    # Colorcoding
     classes = np.unique(Y)
     num_classes = int(classes.max()) + 1 if class_names is None else len(class_names)
-    cmap = plt.cm.get_cmap("tab10", num_classes)
+    cmap = plt.get_cmap("tab10", num_classes)
 
-    plt.figure(figsize=(6.5, 6.0))
+    plt.figure(figsize=(7, 6))
     for c in classes:
         mask = (Y == c)
         label = (class_names[c] if class_names and c < len(class_names) else str(int(c)))
-        plt.scatter(
-            Z2[mask, 0], Z2[mask, 1],
-            s=5, alpha=0.8,
-            label=label,
-            color=cmap(int(c)),
-            linewidths=0
-        )
+        plt.scatter(Z2[mask, 0], Z2[mask, 1], s=5, alpha=0.8, label=label, color=cmap(int(c)), linewidths=0)
         if annotate_centroids and mask.any():
             m = Z2[mask].mean(axis=0)
-            plt.text(m[0], m[1], label, fontsize=8, ha="center", va="center",
-                     bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
+            plt.text(m[0], m[1], label, fontsize=8, ha="center", va="center", bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
 
-    # Quantitative Einordnung
-    tw = float(trustworthiness(Z, Z2, n_neighbors=5))
-    plt.title(f"{tag}\n(t-SNE: lokale Struktur; Trustworthiness@5={tw:.3f})")
-    plt.xlabel("t-SNE dimension 1 (arbitrary)")
-    plt.ylabel("t-SNE dimension 2 (arbitrary)")
     if show_legend:
         plt.legend(markerscale=3, frameon=False, bbox_to_anchor=(1.02, 1), loc="upper left")
     plt.tight_layout()
@@ -363,7 +339,7 @@ def save_tsne(
 
 
 def save_curves(history: dict, out_dir: str, tag: str) -> None:
-    """Save train/val curves (total loss and BCE) across epochs."""
+    """Save train/val curves (total loss and BCE) across epochs"""
     # Extract epoch wise metrics accumulated during training
     epochs = list(range(1, len(history.get("train", [])) + 1))
     if not epochs:
@@ -397,7 +373,7 @@ def save_curves(history: dict, out_dir: str, tag: str) -> None:
 
 
 def run(dataset: str, z_dim: int, beta: float, seed: int, epochs: int, batch_size: int, lr: float, patience: int, out_root: str, num_workers: int) -> Tuple[float, float]:
-    # Automatically select the GPU when available. Otherwise fall back to the CPU
+    # Automatically select the GPU when available, otherwise fall back to the CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     tag_base = f"{dataset}_z{z_dim}_beta{int(beta)}_{timestamp}"
@@ -409,11 +385,11 @@ def run(dataset: str, z_dim: int, beta: float, seed: int, epochs: int, batch_siz
     model = VAE(z_dim).to(device)
     model, history = train(model, train_loader, val_loader, device, epochs, beta, lr, patience)
 
-    # Re-evaluate to be safe after loading best state
+    # Reevaluate to be safe after loading best state
     final_loss, final_bce, _ = evaluate(model, val_loader, device, beta)
 
-    # Save qualitative and quantitative diagnostics
-    run_tag = f"{tag_base}_run0"
+    # Save qualitative and quantitative results
+    run_tag = tag_base
     save_reconstructions(model, val_loader, device, out_dir, run_tag)
     save_interpolations(model, val_loader, device, out_dir, run_tag)
     save_tsne(model, val_loader, device, out_dir, run_tag)
