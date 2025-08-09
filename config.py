@@ -1,0 +1,10 @@
+dataset = "fashion"      # "mnist" or "fashion"
+epochs = 300             # number of epochs
+batch_size = 128         # mini batch size
+lr = 1e-5                # learning rate for Adam
+z_dim = 32               # latent dimensionality
+beta = 1.0               # beta coefficient for KL term
+seed = 42                # base random seed
+patience = 30            # early stopping patience in epochs
+out = "outputs"          # output directory root
+num_workers = 0          # dataloader workers. use 0 on Windows
